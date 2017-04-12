@@ -381,7 +381,7 @@ org.gradle.jvmargs=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address
 
 #### 项目地址
 
-代码整理后上传。
+https://github.com/PengsongAndroid/MyAnnotation
 
 **参考：**
 [Java注解处理器](http://www.race604.com/annotation-processing/)
