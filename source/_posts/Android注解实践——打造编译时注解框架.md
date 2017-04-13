@@ -5,12 +5,12 @@ categories: Android文章
 tags: Android, Annotation, 注解
 ---
 最近一直在做项目的重构工作，因为是做组件化，正好看到阿里云开源一个路由框架[ARouter](https://github.com/alibaba/ARouter)。看了一下源码，发现是项目主要也是运用到了编译时注解的技术。联想到之前最早用过的[ButterKnife](https://github.com/JakeWharton/butterknife)，到现在的[Retrofit](https://github.com/square/retrofit)等等各种主流的开源框架，其实都有使用到这项强大技术，之前也只是简单了解了一下原理，这次就想自己也写一个这种框架，搞清楚实现原理。
-首先，注解处理器（Anonotation Processor）分为编译时（Compile time）注解和运行时（Runtime）通过反射机制运行的注解。
-这篇文章只涉及编译时注解（类似于[ButterKnife](https://github.com/JakeWharton/butterknife)），教大家如何打造一个简单的编译时注解框架，如何调试，和一些在实践中碰到的问题。
+首先，注解处理器(Anonotation Processor)分为编译时(Compile time)注解和运行时(Runtime)通过反射机制运行的注解，因为编译期注解实际上是生成.java文件辅助我们实现功能，所以不会有效率上的损耗，上面提到的开源框架也都是基于这种基础实现的。
+这篇文章只涉及编译时注解(类似于[ButterKnife](https://github.com/JakeWharton/butterknife))，教大家如何打造一个简单的编译时注解框架，如何调试，和一些在实践中碰到的问题。
 <!-- more -->
 #### 基本概念
 注解处理器是Javac的一个工具，它用来在编译时扫描和处理注解，更多信息可以查看[官方文档](http://docs.oracle.com/javase/tutorial/java/annotations/index.html)。
-一个注解的注解处理器，以Java代码作为输出，生成文件（通常是.java文件）作为输出。这意味着你可以生成java代码，当然生成的.java代码是在新的文件中，你不能修改原有的Java类。但是我们可以生成辅助类，来帮助我们完成工作，就像[ButterKnife](https://github.com/JakeWharton/butterknife)这样，我们省去了findviewById的重复工作，仅需一行注解，他就能帮我们完成操作。我们掌握这项技术，也可以在之后的工作中减少重复无意义的工作，更重要的是注解能够帮我们更好的解耦我们的各个模块，实现控制反转。
+一个注解的注解处理器，以Java代码作为输出，生成文件（通常是.java文件）作为输出。这意味着你可以生成java代码，当然生成的.java代码是在新的文件中，你不能修改原有的Java类。但是我们可以生成辅助类，来帮助我们完成工作，就像[ButterKnife](https://github.com/JakeWharton/butterknife)这样，我们省去了findviewById的重复工作，仅需一行注解，他就能帮我们完成操作。我们掌握这项技术，也可以在之后的工作中减少重复无意义的工作，更重要的是注解能够帮我们更好的解耦我们的各个模块。
 ##### 注解类型
 首先举一个我们最常见的注解：
 ```java
