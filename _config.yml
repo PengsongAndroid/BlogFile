@@ -71,3 +71,9 @@ deploy:
   type: git
   repository: https://github.com/PengsongAndroid/pengsongandroid.github.com.git
   branch: master
+  
+search:
+  path: search.xml
+  field: post
+  format: html
+  limit: 10000
