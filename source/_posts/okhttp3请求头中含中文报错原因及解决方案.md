@@ -55,14 +55,14 @@ Content-disposition是 MIME 协议的扩展，MIME 协议指示 MIME 用户代�
 ```
 	File imageFile = Glide.with(mContext).load(url).downloadOnly(Target.SIZE_ORIGINAL, 				Target.SIZE_ORIGINAL).get();
 ```
-所以当时我的理解是，glide在加载图片时内部缓存文件时因为filename报错。看了半天源码后，发现最终调用的是项目中自定义的DataFetcher的loadData方法，然后就是okhttp的正常请求调用了。其实整个调用链跟异常日志的堆栈信息是一样的。okhttp的详细调用略过，最终的问题出现在Http2xStream的readHttp2HeadersList方法，这里会读取response的header，问题在这个调用
+所以当时我的理解是，glide在加载图片时内部缓存文件时因为filename报错。看了半天源码后，发现最终调用的是项目中自定义的DataFetcher的loadData方法，然后就是okhttp的正常请求调用了。其实整个调用链跟异常日志的堆栈信息是一样的。okhttp的详细调用略过，最终的问题出现在Http2xStream（这个类是负责处理Http2.0协议的，还有一个Http1xStream类处理Http1.x协议，这个会根据当前设备是否支持去初始化不同的类，这也是为什么会有请求头中文报错只有部分机型存在）的readHttp2HeadersList方法，这里会读取response的header，问题在这个调用
 ```
 	headersBuilder.add(name.utf8(), value);
 ```
 okhttp3.Headers.java
 ```
-    /** Add a field with the specified value. */
-    public Builder add(String name, String value) {
+	/** Add a field with the specified value. */
+	public Builder add(String name, String value) {
       checkNameAndValue(name, value);
       return addLenient(name, value);
     }
