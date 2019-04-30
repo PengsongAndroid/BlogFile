@@ -1,0 +1,33 @@
+bufferedSink okio gzip
+https://blog.csdn.net/sbsujjbcy/article/details/50523623
+
+okhttp缓存策略
+
+如何根据request查找缓存？
+代码在Cache类中的get方法，会根据request的url生成md5hash值作为key去DiskLruCache（这个里面也有很多逻辑，之后展开）中查找
+cache-control需要了解的
+https://blog.csdn.net/u012375924/article/details/82806617
+1.本地没有缓存，直接返回
+2.https并且没有握手信息，丢弃缓存
+3.根据cacheResponse的返回码和request的cacheControl共同判断，不返回缓存
+4.根据request的cacheControl或者请求头的If-Modified-Since、If-Modified-Since标识判断，不返回缓存
+5.根据response的cacheControl和缓存失效时间共同判断，只返回缓存
+6.根据cacheResponse的请求头参数，构造一个新的request对象，然后根据4的判断，返同时返回request和response，或仅返回request
+
+okhttp-拦截器
+okhttp-缓存策略
+okhttp-数据压缩
+okhttp-连接池
+
+
+
+大话数据结构
+
+app 被杀掉进程后，是否还能收到广播、
+
+Android的多点触控如何传递
+
+
+Queue、HashMap、LinkedHashMap、HashSet、Http1.x/2.0、树
+
+八进制每个数是由三个二进制的数组成的

@@ -1,0 +1,23 @@
+点击一个图标到这个应用启动的全过程（前面是项目经验没啥好说的）。
+答点击图标后通过startActivity远程调用到ams中，ams中将新启动的activity以activityrecord的结构压入activity栈中，并通过远程binder回调到原进程，使得原进程进入pause状态，原进程pause后通知ams我pause了。ams再根据栈中activity的启动intent中的flag是否含有new_task的标签判断是否需要启动新进程，启动新进程通过startProcessXXX的函数。启动新进程后通过反射调用ActivityThread的main函数，main函数中调用looper.prepar和lopper.loop启动消息队列循环机制。最后远程告知ams我启动了。ams回调handleLauncherAcitivyt加载activity。在handlerLauncherActivity中会通过反射调用Application的onCreate和activity的onCreate以及通过handleResumeActivity中反射调用activity的onresume。一个应用就此启动。
+
+Retrofit原理。
+答主要是通过动态代理将接口直接转换成代理对象。动态代理和静态代理的区别，动态代理直接在虚拟机层面构建字节码对象。
+
+View自定义的流程，实现哪些方法。
+答1.实现OnMeasure，onlayout,onDraw. 继续问“onMeasure中会用哪些方法？”（我觉得这题可能没大好，我是想回答的详细点的，结果还没打到点他就说好，继续下一题，不知道是认可了还是觉得我答的过于啰嗦，如果觉得太啰嗦可以提出来啊。。。） 我回答onMeasure 中传入两个int数值，这个数值32位，前2位表示模式，后30位表示宽度、高度。这是外表容器给内部view的限制。一种模式是容器给你多大的值，你就是多大的值（match_parent），第二种，容易给内部view多大的空间，内部view不用管，是多大就是多大。第三种，容器给子view多大的空间，和子view自己算出来的占用空间，选择小的那个（wrap_content）.说到这我正打算说onMeasure会调用measureChildwithmargin类的函数,他说好了,然后下一题.
+
+最后是算法题，面试官的表述不是很清晰，所以开始没理解他的意思，我归纳一下题目：有1，3，7三个面值的金钱，现在要取n元。怎么取个数最少。（n是已知数） 意思就是 1*a+3*b+7*c=n 什么情况(a+b+c)最小。当然这是我自己归纳出来的，他开始的描述让我想哭。
+答开始脑子有点没反应过来，把它当逻辑题做了，想了5分钟后才反应过来，这是编程题啊。遍历呀。 a的取值范围（0~n）b的取值范围(0~n/3) c的取值范围(0~n/7) 遍历取最小值。当然这种情况效率并不高，我当时也和面试官说了，没太考虑效率，如果需要可以再改。感觉他也认可，思路对就行了。 其它一些零碎的问题没印象了，主要就这些。
+
+1.activity launchmode中single task和single instance的区别,以及各自的使用场景。 2.aidl的实现原理，通过aidl生成的.java文件中都有哪些成员，各自的作用。 3.Looper，Handler，MessageQueue的原理，Looper如何保证每个线程只有一个。 4.用数组实现栈，考虑如何在O（1）时间内获得栈的最小值。 
+5.Object中定义了哪些方法。equals一般如何实现，实现equals（）时候还需要实现哪些方法，为什么。 
+6.synchronized和lock的区别。 
+7.如何判断两个链表是否有交点。
+8.activity与fragment生命周期的关系。 9.kotlin中var和val的区别，lateinit和lazy的区别。 
+10.从activity a启动activity b，二者生命周期如何变化，为何是这种顺序。 11.手写二叉树层序遍历。 12.手写在数组指定位置插入元素，后续元素向后顺延，考虑数组长度和数组容量间的关系，长度等于容量时需要重新分配更大的内存。 13.如何实现通讯录搜索的功能（通过输入汉字查找姓名，通过号码查找姓名）。 14.java内部类可以访问外部类的field，如何做到的。
+15.设计一个应用的登录系统。 
+16.微信通讯录增删改设计（本地和服务端）。
+17.java中的线程和操作系统的线程区别。 
+18.如何保证js代码只运行在一个手机应用中。
+答有些题到现在也还没整明白，挑一些我知道的重点分享一下： 1.具体区别自己查阅一下，很多博客写的很详细了。适用场景：singleTask适合应用的launch activity，singleInstance适合全局唯一且需要与其他activity分离的场景，如闹钟，接听电话等。 4.O(1)时间获取最小值，应该用的是空间换时间的逻辑，统一再分配一个数组用于存储当前栈内元素的最小值，每存、取一个值，最小值数组对应存取一个值。比如一个栈存了5个元素：[3,4,2,1,5]，那么对应的最小值数组为[3,3,2,1,1]。 5.主要是equals， hashcode， wait，notify，toString, finalize这几个。实现equals的时候需要同时实现hashcode方法，否则在使用哈希相关的数据结构（HashMap, HashSet）的时候，会出现两个实例虽然相等，但被放入了不同的槽当中，这种不一致的情况。 7.两个链表的交点的问题，需要考虑链表是否包含环。①都不包含环：只需要看两个链表的最后一个节点是否相同，复杂度O(L1+L2);②一个链表有环，另一个没有环，则两个链表必然不想交；③两个链表都有环，找到一个链表环中的一个点，判断是否在另一个链表上。 11.使用队列（FIFO）的数据结构即可。
