@@ -1,0 +1,66 @@
+---
+title: Activity启动相关
+date: 2018-11-19 11:19:24
+categories: Android基础知识
+tags: Android, 源码
+---
+https://blog.csdn.net/freekiteyu/article/details/79483406
+
+这篇讲的是activity跟window关系，有activity启动的流程介绍
+https://blog.csdn.net/freekiteyu/article/details/79408969
+
+客户端：
+方法调用顺序，Activity.startActivity->Activity.startActivityForResult->Instrumentation.execStartActivity
+这个方法里会调用ActivityManager.getService().startActivity，而ActivityManager.getService()返回的是IActivityManager，一个binder实例。
+
+服务端：
+ActivityManagerService.startActivty->startActivityAsUser->ActivityStarter.startActivityMayWait
+
+## Binder
+https://juejin.im/entry/5be52aff6fb9a049be5cfc0c
+https://blog.csdn.net/freekiteyu/article/details/70082302
+
+## IPC
+通常的IPC通信方式做法是，从A用户空间，将数据从内存缓存区，拷贝到开辟的内核缓存区，然后再拷贝到B用户空间开辟的内存缓存区。这样数据发送方进程和接收方进程就完成了一次数据交互，称之为进程间通信。
+但是这种传统的IPC机制存在两个明显的问题：
+1.性能低下，一次数据传递需要经历两次数据拷贝。
+2.接受进程并不知道需要多大的空间来存放传递过来的数据，只能开辟尽可能大的空间或者调用API接受消息头来获取消息体的大小，这两种做法不是浪费空间就是浪费时间。
+
+### 动态可加载模块
+传统的IPC机制，例如管道、Socket都是内核的一部分，所以通过内核支持可以实现跨进程通信。但是Binder并不是Linux的一部分，这得益于Linux的动态内核可加载模块（Loadable Kernel Module，LKM）机制，模块是具有独立功能的程序，可以被单独编译，但是不能独立运行。它运行的时候被链接到内核空间作为内核的一部分运行。这样就可以通过这个内核模块作为桥梁来进行通信。
+在 Android 系统中，这个运行在内核空间，负责各个用户进程通过 Binder 实现通信的内核模块就叫 Binder 驱动（Binder Dirver）。
+
+### 内存映射
+上面提到的Binder是如何存在于内核空间的，但是两次拷贝的问题是如何解决的呢？这个就要设计到内存映射了。
+Binder的IPC机制通过mmap()内存映射来实现，mmap()是操作系统中的一种内存映射方法。简单来说就是内存映射能够将用户空间的一块内存区域映射到内核空间。映射关系建立后，用户对这块空间的修改可以直接反应到内核空间，内核空间对这段区域的修改也能反应到用户空间。
+内存映射能够减少数据拷贝的次数，两个空间各自的修改可以直接反应到映射的内存区域，被双方感知。
+
+## Binder优点
+1.性能。减少数据拷贝的次数。
+2.安全性。传统的IPC无法获取对付可靠的进程pid，从而无法鉴别身份。而android中会给每一个安装好的app分配一个自己的UID。
+3.C/S架构，稳定性更好。
+
+## Binder驱动
+Binder驱动是一种虚拟的字符设备，注册在/dev/bindr中，其中定义了一套Binder通信协议，负责建立进程间Binder通信，提供了数据包在进程之间传递的底层支持。
+他的角色类似路由，他是提供进程间通信的底层支持。负责将Client端的请求转发到Server，并将Server的数据返回给Client。
+
+## ServerManager
+他的作用类似DNS服务器，负责将Client请求的Server的Binder描述转化为具体的Server地址，以便Binder驱动将Client的请求转达到Server。当Server需要提供服务的时候，他必须先向ServerManager注册，这样子，ServerManager中，就存有一份类似key-value的数据，保存了一份Server的Binder字符名称和Binder引用的映射以便Client可以找到。
+
+## Client
+Client的作用是发起请求，通过Binder向ServerManager发起请求获取Server的具体地址，然后交由Binder驱动转发。
+
+## Server
+Server假如需要对外提供服务，他就需要先将自己注册到ServerManager中，以便被解析出来。Server在响应请求之后，就将数据通过Binder驱动再次将数据传递会Client。这就是一次完整的IPC调用。
+
+## ServerManager产生
+还有一个问题就是ServerManager的产生，因为Client/Server都是需要通过Binder与ServerManager进行通信的，那么这个ServerManager是如何产生的呢？
+1.在Android系统启动之后，会创建一个名词为servermanager的进程，可以查看ZygoteInit文件，在里面的main方法中，调用Zygote的forkSystemServer产生。它通过一个约定的命令BINDERSERVER_MGR向Binder驱动注册，申请成为ServerManager。Binder驱动会自动为ServerManager创建一个Binder实体。
+2.这个Binder实体的引用在所有的Client中都是0，也就是说各个Client通过0这个引用就可以与ServerManager进行通信。
+
+## 代理过程
+我们在Client端，向ServerManager获取具体的Server端的Binder引用的时候，会首先进过Binder驱动，Binder驱动它并不会把真正的Server的Binder引用返回给Client端，而是返回一个代理的java对象，该对象具有跟Server端的Binder引用相同的方法签名，这个对象为ProxyObject，他具有跟Server的Binder实例一样的方法，只是这些方法并没有Server端的能力，这个ProxyObject的能力是可以通过Binder驱动，正在实现对Server的Binder进行调用，从而完成数据传递。
+
+
+
+

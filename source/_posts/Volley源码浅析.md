@@ -284,6 +284,7 @@ add方法和刚刚的finish方法应该结合一起看，方便理解。大致�
 ```
 关键的原因就在于这里初始化构造的accessOrder参数，而这个参数会影响你查询的策略，false是基于插入顺序，true是基于访问顺序，具体实现方式可以自行查看LinkedHashMap的get方法。这样的话会对查询重复的元素效率提升巨大。
 关于CacheDispatcher，其实他的实现跟上面的NetworkDispatcher是类似的，也是会循环的从queue中取数据，然后去缓存中查找，会根据缓存是否失效是否存在等判断查找缓存，如果没有命中缓存则会把请求添加到网络队列中。
+上面还有一点需要提到的就是缓存request的队列PriorityBlockingQueue，这是一个实现了阻塞的优先级队列，其内部实际上是一个堆，而request实现了compare接口保证我们的请求是按照添加进去的顺序来决定优先级的。这个PriorityBlockingQueue具体细节我会在之后的文章里面讲解，有兴趣的也可以自行查看源码。
 看完了Volley如何进行一次完整的请求以及缓存、线程、队列的流程，下面就是最重要的一点网络连接的实现，上面有提到过，真正建立连接是在HurlStack对象中的createConnection()方法进行的：
 ```
     protected HttpURLConnection createConnection(URL url) throws IOException {
@@ -299,12 +300,14 @@ add方法和刚刚的finish方法应该结合一起看，方便理解。大致�
 
             boolean checkedWithFactory = false;
 
+			//step1 从缓存中查找对应handler
             // Use the factory (if any)
             if (factory != null) {
                 handler = factory.createURLStreamHandler(protocol);
                 checkedWithFactory = true;
             }
 
+			//step2 在指定包名下查找是否有自定义的协议
             // Try java protocol handler
             if (handler == null) {
                 final String packagePrefixList = System.getProperty(protocolPathProp,"");
@@ -336,6 +339,7 @@ add方法和刚刚的finish方法应该结合一起看，方便理解。大致�
                 }
             }
 
+			//step3 通过不同的协议通过反射创建对应的handler，http请求由okhttp执行
             // Fallback to built-in stream handler.
             // Makes okhttp the default http/https handler
             if (handler == null) {
@@ -399,7 +403,8 @@ add方法和刚刚的finish方法应该结合一起看，方便理解。大致�
 
     }
 ```
-这里实际上也是进行了一系列缓存操作，而真正执行请求的handler是根据协议的不同通过反射或者直接初始化进行创建的，会根据不同协议创建多个handler负责请求的执行。而在代码中我们能看到，http的请求实际上是通过okhttp实现的，也印证了android4.4后原生的网络请求已经替换为okhttp了。
+这个地方稍微讲解一下Java提供为网络请求提供的库，在建立连接的时候我们会创建一个URL资源和一个URLConnection对象，而针对不同的协议会有不同的URLStreamHandler和对应的URLConnection来分别负责对协议的解析，以及与服务器的交互（数据转换等）。
+上面我注释的step1和step3都比较好理解，而step2是留给用户拓展，开发自定义的通讯协议使用的，这里了解一下就行。我们需要关心的是step3，http的请求实际上是通过okhttp实现的，大家查阅资料或者看源码都能知道android4.4后原生的网络请求已经替换为okhttp了。
 
 ### 总结
 至此，我们对Volley的分析已经结束。现在稍微总结一下，Volley实现了一套完整的符合Http语义的缓存机制，并且对性能方面有一些优化（缓存的命中、缓存的写入、重复请求的队列）。在设计中，Volley定义了大量的接口，正是由于这些设计，可以使得Volley拥有高度的扩展性，用户可以针对自己的需求自由的订制其中的实现。针对接口编程，不针对具体细节实现编程，多用组合，少用继承。许多优秀的框架也拥有同样的特性，这也是我们在平时开发过程中能够学习运用的。
