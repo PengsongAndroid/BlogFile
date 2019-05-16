@@ -5,7 +5,14 @@ Activity启动流程，从startActivity开始
 tinker原理
 View事件分发规则
 handler原理、MessageQueue数据结构
-SurfaceView为什么子线程可以更新
+SurfaceView为什么子线程可以更新,如何绘制
+直接用window.add布局有什么风险
+内存泄漏，最终的引用，引用链
+自定义控件，线性布局换行（https://hencoder.com/，https://www.gcssloop.com/customview/CustomViewIndex/）
+属性动画特点，怎么平移，UI线程更新。
+自己开发热修复。
+优化启动时间。
+怎么看dump信息定位
 
 ### 项目中的难点、亮点
 #### okhttp的问题
